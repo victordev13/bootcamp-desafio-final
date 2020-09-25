@@ -46,6 +46,12 @@ const findByPeriod = async (req, res) => {
         );
     }
 
+    if (period.length !== 7) {
+        throw new Error(
+            'Período inválido, o valor deve estar no formato yyyy-mm.'
+        );
+    }
+
     try {
         const data = await TransactionModel.find({ yearMonth: period });
         !data
