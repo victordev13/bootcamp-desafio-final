@@ -45,6 +45,7 @@ export default function App() {
         periods()[0].value
     );
     const [currentScreen, setCurrentScreen] = React.useState(LIST_SCREEN);
+    const [filteredText, setFilteredText] = React.useState('');
 
     React.useEffect(() => {
         const fetchTransactions = async () => {
@@ -55,14 +56,44 @@ export default function App() {
             console.log(`/transaction/?period=${currentPeriod}`);
 
             setTransactions(data.transactions);
-            setFilteredTransactions(data.transactions);
         };
         fetchTransactions();
     }, [currentPeriod]);
 
+    React.useEffect(() => {
+        let newFilteredTransactions = [...transactions];
+        if (filteredText.trim() !== '') {
+            console.log('Cheguei aqui, texto: ' + filteredText);
+            newFilteredTransactions = newFilteredTransactions.filter(
+                (transaction) => {
+                    return transaction.description
+                        .toLowerCase()
+                        .includes(filteredText);
+                }
+            );
+            console.log(newFilteredTransactions);
+        }
+        setFilteredTransactions(newFilteredTransactions);
+    }, [transactions, filteredText]);
+
     const handlePeriodChange = (event) => {
         const newPeriod = event.target.value;
         setCurrentPeriod(newPeriod);
+    };
+
+    const handleDeleteTransaction = async (event) => {
+        const id = event.target.id;
+        await api.delete('/transaction/' + id);
+
+        const newTransactions = transactions.filter((transaction) => {
+            return transaction._id !== id;
+        });
+        setTransactions(newTransactions);
+    };
+
+    const handleFilterChange = (event) => {
+        const text = event.target.value;
+        setFilteredText(text);
     };
     return (
         <div className="container">
@@ -83,23 +114,42 @@ export default function App() {
                         })}
                     </select>
 
+                    <input
+                        type="text"
+                        placeholder="Filtro..."
+                        value={filteredText}
+                        onChange={handleFilterChange}
+                    />
+
                     {filteredTransactions.map((transaction) => {
                         const currentColor =
                             transaction.type === '+'
                                 ? EARNING_COLOR
                                 : EXPANSE_COLOR;
                         return (
-                            <p
+                            <div
                                 key={transaction._id}
                                 style={{
                                     ...styles.transactionStyle,
                                     backgroundColor: currentColor,
                                 }}
                             >
+                                <span style={styles.btnStyle}>
+                                    <button className="waves-effect waves-light btn">
+                                        Editar
+                                    </button>
+                                    <button
+                                        className="waves-effect waves-light btn red darken-4"
+                                        onClick={handleDeleteTransaction}
+                                        id={transaction._id}
+                                    >
+                                        Excluir
+                                    </button>
+                                </span>
                                 {transaction.yearMonthDay} / {''}
                                 <strong>{transaction.category}</strong> -
                                 {transaction.description} - {transaction.value}
-                            </p>
+                            </div>
                         );
                     })}
                 </>
@@ -117,4 +167,5 @@ const styles = {
         border: '1px solid lightgrey',
         borderRadius: '5px',
     },
+    btnStyle: { margin: '10px' },
 };
