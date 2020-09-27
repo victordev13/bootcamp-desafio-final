@@ -63,7 +63,6 @@ export default function App() {
     React.useEffect(() => {
         let newFilteredTransactions = [...transactions];
         if (filteredText.trim() !== '') {
-            console.log('Cheguei aqui, texto: ' + filteredText);
             newFilteredTransactions = newFilteredTransactions.filter(
                 (transaction) => {
                     return transaction.description
