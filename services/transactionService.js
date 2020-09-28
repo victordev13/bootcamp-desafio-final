@@ -9,9 +9,9 @@ const DATE_LENGTH = 8;
 const ID_LENGTH = 24;
 
 const create = async (req, res) => {
-    const { description, category, value, date, type } = req.body;
+    const { description, category, value, yearMonthDay, type } = req.body;
 
-    if (date.length < DATE_LENGTH) {
+    if (yearMonthDay.length < DATE_LENGTH) {
         res.status(501).send({ error: 'Formato de data inválida!' });
     }
 
@@ -24,16 +24,20 @@ const create = async (req, res) => {
             description,
             value,
             category,
-            ...getAllDateFields(date),
+            year: Number(yearMonthDay.substring(0, 4)),
+            month: Number(yearMonthDay.substring(5, 7)),
+            day: Number(yearMonthDay.substring(8, 10)),
+            yearMonth: yearMonthDay.substring(0, 7),
+            yearMonthDay,
             type,
         };
         let newTransaction = new TransactionModel(transaction);
         newTransaction = await newTransaction.save();
         console.log(newTransaction);
-        res.status(200).send({ message: 'Ok', data: newTransaction });
+        res.status(200).send({ message: 'Ok', transaction: newTransaction });
     } catch (error) {
         res.status(500).send({
-            error: 'Ocorreu um erro na inserção! :' + error,
+            error: 'Ocorreu um erro na inserção! :' + error + '/' + req.body,
         });
     }
 };
@@ -136,19 +140,16 @@ const update = async (req, res) => {
 //Funções auxiliares
 
 const getAllDateFields = (date) => {
-    let allDate = new Date(date.toString());
-    console.log(allDate);
-    allDate = {
-        year: allDate.getFullYear(),
-        month: (allDate.getMonth() + 1).toString().padStart(2, '0'),
-        day: allDate.getDate(),
-        yearMonth: `${allDate.getFullYear()}-${(allDate.getMonth() + 1)
-            .toString()
-            .padStart(2, '0')}`,
-        yearMonthDay: `${allDate.getFullYear()}-${(allDate.getMonth() + 1)
-            .toString()
-            .padStart(2, '0')}-${allDate.getDate()}`,
+    console.log(date);
+
+    let allDate = {
+        year: Number(date.substring(0, 4)),
+        month: Number(date.substring(5, 7)),
+        day: Number(date.substring(8, 10)),
+        yearMonth: `${year}-${month}`,
+        yearMonthDay: date,
     };
+    console.log(allDate);
     return ({ year, month, day, yearMonth, yearMonthDay } = allDate);
 };
 

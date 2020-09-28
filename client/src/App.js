@@ -1,5 +1,7 @@
 import React from 'react';
 import axios from 'axios';
+import ListScreen from './components/ListScreen';
+import MaintenenceScreen from './components/MaintenenceScreen';
 
 const api = axios.create({ baseURL: 'api' });
 
@@ -35,9 +37,7 @@ export default function App() {
     };
 
     const LIST_SCREEN = 0;
-    const EDIT_SCREEN = 1;
-    const EARNING_COLOR = '#55efc4';
-    const EXPANSE_COLOR = '#fab1a0';
+    const MAINTENENCE_SCREEN = 1;
 
     const [transactions, setTransactions] = React.useState([]);
     const [filteredTransactions, setFilteredTransactions] = React.useState([]);
@@ -46,6 +46,8 @@ export default function App() {
     );
     const [currentScreen, setCurrentScreen] = React.useState(LIST_SCREEN);
     const [filteredText, setFilteredText] = React.useState('');
+    const [selectedTransaction, setSelectedTransaction] = React.useState(null);
+    const [newTransaction, setNewTransaction] = React.useState(false);
 
     React.useEffect(() => {
         const fetchTransactions = async () => {
@@ -75,6 +77,14 @@ export default function App() {
         setFilteredTransactions(newFilteredTransactions);
     }, [transactions, filteredText]);
 
+    React.useEffect(() => {
+        const newScreen =
+            selectedTransaction !== null || newTransaction
+                ? MAINTENENCE_SCREEN
+                : LIST_SCREEN;
+        setCurrentScreen(newScreen);
+    }, [selectedTransaction, newTransaction]);
+
     const handlePeriodChange = (event) => {
         const newPeriod = event.target.value;
         setCurrentPeriod(newPeriod);
@@ -82,89 +92,98 @@ export default function App() {
 
     const handleDeleteTransaction = async (event) => {
         const id = event.target.id;
-        await api.delete('/transaction/' + id);
-
         const newTransactions = transactions.filter((transaction) => {
             return transaction._id !== id;
         });
-        setTransactions(newTransactions);
+        await api
+            .delete('/transaction/' + id)
+            .then(setTransactions(newTransactions));
     };
 
     const handleFilterChange = (event) => {
         const text = event.target.value;
         setFilteredText(text);
     };
+
+    const handleEditTransaction = (event) => {
+        const id = event.target.id;
+        const newSelectedTransaction = filteredTransactions.find(
+            (transaction) => {
+                return transaction._id === id;
+            }
+        );
+
+        setSelectedTransaction(newSelectedTransaction);
+    };
+
+    const handleCancelMaintenence = () => {
+        setNewTransaction(false);
+        setSelectedTransaction(null);
+    };
+
+    const handleSaveMaintenence = async (newTransaction) => {
+        const { _id } = newTransaction;
+
+        if (!_id) {
+            const newTransactionForInsert = {
+                ...newTransaction,
+                // year: Number(newTransaction.yearMonthDay.substring(0, 4)),
+                // month: Number(newTransaction.yearMonthDay.substring(5, 7)),
+                // day: Number(newTransaction.yearMonthDay.substring(8, 10))
+            };
+            //
+            console.log(newTransactionForInsert);
+            //
+            const inserted = await api.post(
+                `/transaction/`,
+                newTransactionForInsert
+            );
+            console.log(inserted);
+        } else {
+            const completeTransaction = {
+                ...newTransaction,
+                // year: Number(newTransaction.yearMonthDay.substring(0, 4)),
+                // month: Number(newTransaction.yearMonthDay.substring(5, 7)),
+                // day: Number(newTransaction.yearMonthDay.substring(8, 10))
+            };
+            await api.put(`/transaction/${_id}`, completeTransaction);
+            let newTransactions = [...transactions];
+            const index = newTransactions.findIndex((transaction) => {
+                return transaction._id === completeTransaction._id;
+            });
+            newTransactions[index] = completeTransaction;
+            setTransactions(newTransactions);
+        }
+
+        setSelectedTransaction(null);
+    };
+
+    const handleNewTransaction = () => {
+        setNewTransaction(true);
+    };
+
     return (
         <div className="container">
             <h1 className="center">Desafio Final</h1>
             {currentScreen === LIST_SCREEN ? (
-                <>
-                    <select
-                        className="browser-default"
-                        value={currentPeriod}
-                        onChange={handlePeriodChange}
-                    >
-                        {periods().map((period) => {
-                            return (
-                                <option value={period.value} key={period.text}>
-                                    {period.text}
-                                </option>
-                            );
-                        })}
-                    </select>
-
-                    <input
-                        type="text"
-                        placeholder="Filtro..."
-                        value={filteredText}
-                        onChange={handleFilterChange}
-                    />
-
-                    {filteredTransactions.map((transaction) => {
-                        const currentColor =
-                            transaction.type === '+'
-                                ? EARNING_COLOR
-                                : EXPANSE_COLOR;
-                        return (
-                            <div
-                                key={transaction._id}
-                                style={{
-                                    ...styles.transactionStyle,
-                                    backgroundColor: currentColor,
-                                }}
-                            >
-                                <span style={styles.btnStyle}>
-                                    <button className="waves-effect waves-light btn">
-                                        Editar
-                                    </button>
-                                    <button
-                                        className="waves-effect waves-light btn red darken-4"
-                                        onClick={handleDeleteTransaction}
-                                        id={transaction._id}
-                                    >
-                                        Excluir
-                                    </button>
-                                </span>
-                                {transaction.yearMonthDay} / {''}
-                                <strong>{transaction.category}</strong> -
-                                {transaction.description} - {transaction.value}
-                            </div>
-                        );
-                    })}
-                </>
+                <ListScreen
+                    transactions={filteredTransactions}
+                    periods={periods}
+                    filteredText={filteredText}
+                    onChangeFilter={handleFilterChange}
+                    onDeleteTransaction={handleDeleteTransaction}
+                    currentPeriod={currentPeriod}
+                    onChangePeriod={handlePeriodChange}
+                    onEditTransaction={handleEditTransaction}
+                    onNewTransaction={handleNewTransaction}
+                />
             ) : (
-                <p>Tela de edição</p>
+                <MaintenenceScreen
+                    transaction={selectedTransaction}
+                    onCancel={handleCancelMaintenence}
+                    onSave={handleSaveMaintenence}
+                />
             )}
         </div>
     );
 }
-
-const styles = {
-    transactionStyle: {
-        padding: '5px 10px ',
-        margin: '5px',
-        border: '1px solid lightgrey',
-        borderRadius: '5px',
-    },
-    btnStyle: { margin: '10px' },
-};
