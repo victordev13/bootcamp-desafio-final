@@ -5,6 +5,13 @@ import MaintenenceScreen from './components/MaintenenceScreen';
 
 const api = axios.create({ baseURL: 'api' });
 
+function getCurrentPeriod() {
+    const date = new Date();
+    const currentDate = `${date.getFullYear()}-${(date.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}`;
+    return currentDate;
+}
 export default function App() {
     const periods = () => {
         const dateYear = new Date().getFullYear();
@@ -42,7 +49,7 @@ export default function App() {
     const [transactions, setTransactions] = React.useState([]);
     const [filteredTransactions, setFilteredTransactions] = React.useState([]);
     const [currentPeriod, setCurrentPeriod] = React.useState(
-        periods()[0].value
+        getCurrentPeriod()
     );
     const [currentScreen, setCurrentScreen] = React.useState(LIST_SCREEN);
     const [filteredText, setFilteredText] = React.useState('');
@@ -131,14 +138,20 @@ export default function App() {
                 // month: Number(newTransaction.yearMonthDay.substring(5, 7)),
                 // day: Number(newTransaction.yearMonthDay.substring(8, 10))
             };
-            //
-            console.log(newTransactionForInsert);
-            //
+
             const inserted = await api.post(
                 `/transaction/`,
                 newTransactionForInsert
             );
-            console.log(inserted);
+            const newTransactions = [
+                ...transactions,
+                inserted.data.transaction,
+            ];
+            newTransactions.sort((a, b) =>
+                a.yearMonthDay.localeCompare(b.yearMonthDay)
+            );
+            setTransactions(newTransactions);
+            setNewTransaction(false);
         } else {
             const completeTransaction = {
                 ...newTransaction,
